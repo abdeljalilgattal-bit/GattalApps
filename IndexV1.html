@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جامعة تبسة - نظام استخراج وثائق الأساتذة المؤقتين</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.49.0/build/docxtemplater.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root { --primary: #1e4663; --success: #27ae60; --accent: #3498db; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); direction: rtl; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1400px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: var(--primary); border-bottom: 3px solid var(--accent); padding-bottom: 15px; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .card { background: #fff; border: 1px solid #e0e0e0; padding: 20px; border-radius: 12px; }
+        h3 { margin-top: 0; color: var(--accent); border-right: 4px solid var(--accent); padding-right: 10px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; }
+        input[type="file"] { width: 100%; padding: 8px; border: 1px dashed #ccc; border-radius: 6px; cursor: pointer; }
+        .btn-process { width: 100%; background: var(--success); color: white; padding: 15px; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .btn-process:hover { background: #219150; }
+        .btn-month { background: #e67e22; margin: 5px; padding: 8px 15px; font-size: 0.9rem; width: auto; }
+        .btn-month:hover { background: #d35400; }
+        #status { text-align: center; margin: 15px 0; font-weight: bold; padding: 10px; border-radius: 8px; display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background: var(--primary); color: white; }
+        .actions { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+        .doc-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+        .doc-btn.contract { background: #e67e22; }
+        .doc-btn.work { background: #8b5cf6; }
+        .doc-btn.admin { background: #2c3e50; }
+        .month-buttons { display: flex; gap: 10px; justify-content: center; margin: 15px 0; flex-wrap: wrap; }
+        .template-status { font-size: 12px; margin-top: 5px; color: #666; }
+        .status-ready { color: #27ae60; }
+        .status-missing { color: #e74c3c; }
+        .login-container {
+            background: white; border-radius: 28px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+            width: 500px; padding: 40px; text-align: center; margin: 80px auto;
+        }
+        .login-logo { width: 80px; height: 80px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white; font-size: 36px; }
+        .login-title-ar { font-size: 20px; font-weight: bold; color: var(--primary); margin: 5px 0; }
+        .login-title-fr { font-size: 13px; color: #666; margin-bottom: 15px; }
+        .login-faculty-ar { font-size: 14px; font-weight: bold; color: #2c3e50; margin: 5px 0; }
+        .login-faculty-fr { font-size: 11px; color: #888; margin-bottom: 25px; }
+        .login-input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; margin-top: 5px; box-sizing: border-box; }
+        .login-btn { width: 100%; background: var(--success); color: white; border: none; padding: 12px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        .login-btn:hover { background: #219150; }
+        .error-msg { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 8px; margin-top: 15px; display: none; }
+        .header-university { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e0e0e0; }
+        .uni-ar { font-size: 18px; font-weight: bold; color: var(--primary); }
+        .uni-fr { font-size: 12px; color: #666; }
+        .faculty-ar { font-size: 14px; font-weight: bold; color: #2c3e50; margin-top: 5px; }
+        .faculty-fr { font-size: 11px; color: #888; }
+        .logout-btn { background: #e74c3c; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .logout-btn:hover { background: #c0392b; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+    </style>
+</head>
+<body>
+
+<!-- شاشة تسجيل الدخول -->
+<div id="loginPage" class="login-container">
+    <div class="login-logo">📚</div>
+    <div class="login-title-ar">جامعة الشهيد الشيخ العربي التبسي - تبسة</div>
+    <div class="login-title-fr">Echahid Cheikh Larbi Tebessi University - Tebessa</div>
+    <div class="login-faculty-ar">كلية العلوم الدقيقة وعلوم الطبيعة والحياة</div>
+    <div class="login-faculty-fr">Faculty of Exact Sciences, Natural and Life Sciences</div>
+    
+    <div style="text-align: right;">
+        <div><label>👤 اسم المستخدم</label></div>
+        <input type="text" id="username" class="login-input" placeholder="أدخل اسم المستخدم">
+        <div style="margin-top: 15px;"><label>🔒 كلمة المرور</label></div>
+        <input type="password" id="password" class="login-input" placeholder="أدخل كلمة المرور">
+    </div>
+    
+    <button class="login-btn" onclick="login()">تسجيل الدخول</button>
+    <div class="error-msg" id="errorMsg">❌ اسم المستخدم أو كلمة المرور غير صحيحة</div>
+</div>
+
+<!-- النظام الرئيسي -->
+<div id="mainSystem" style="display: none;">
+    <div class="container">
+        <div class="header-row">
+            <div style="flex: 1;">
+                <h1 style="margin: 0; text-align: right;">📄 استخراج وثائق الأساتذة المؤقتين</h1>
+            </div>
+            <button class="logout-btn" onclick="logout()">🚪 تسجيل خروج</button>
+        </div>
+        
+        <div class="header-university">
+            <div class="uni-ar">جامعة الشهيد الشيخ العربي التبسي - تبسة</div>
+            <div class="uni-fr">Echahid Cheikh Larbi Tebessi University - Tebessa</div>
+            <div class="faculty-ar">كلية العلوم الدقيقة وعلوم الطبيعة والحياة</div>
+            <div class="faculty-fr">Faculty of Exact Sciences, Natural and Life Sciences</div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>❶ نماذج DOCX (Word)</h3>
+                <div class="input-group">
+                    <label>📋 قالب استمارة المعلومات:</label>
+                    <input type="file" id="tpl_info" accept=".docx">
+                    <div id="infoStatus" class="template-status status-missing">❌ لم يتم الرفع</div>
+                </div>
+                <div class="input-group">
+                    <label>📑 قالب عقد التوظيف:</label>
+                    <input type="file" id="tpl_contract" accept=".docx">
+                    <div id="contractStatus" class="template-status status-missing">❌ لم يتم الرفع</div>
+                </div>
+                <div class="input-group">
+                    <label>📜 قالب شهادة العمل:</label>
+                    <input type="file" id="tpl_work" accept=".docx">
+                    <div id="workStatus" class="template-status status-missing">❌ لم يتم الرفع</div>
+                </div>
+                <div class="input-group">
+                    <label>🏛️ قالب شهادة إدارية:</label>
+                    <input type="file" id="tpl_admin" accept=".docx">
+                    <div id="adminStatus" class="template-status status-missing">❌ لم يتم الرفع</div>
+                </div>
+                <div class="input-group">
+                    <label>📊 قالب كشف المكافأة (Word):</label>
+                    <input type="file" id="tpl_reward" accept=".docx">
+                    <div id="rewardStatus" class="template-status status-missing">❌ لم يتم الرفع</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>❷ ملفات البيانات (Excel)</h3>
+                <div class="input-group"><label>📁 ملف السداسي الأول (1، 3، 5):</label><input type="file" id="excel1" accept=".xlsx"></div>
+                <div class="input-group"><label>📁 ملف السداسي الثاني (2، 4، 6):</label><input type="file" id="excel2" accept=".xlsx"></div>
+            </div>
+        </div>
+
+        <button id="processBtn" class="btn-process">🔄 معالجة البيانات وتوليد القائمة</button>
+        
+        <div id="monthButtons" class="month-buttons" style="display: none;">
+            <h4 style="width: 100%; text-align: center; margin: 10px 0;">📅 تصدير كشف المكافأة (Word) لكل شهر على حدة:</h4>
+            <button id="exportOctBtn" class="btn-process btn-month">📄 أكتوبر</button>
+            <button id="exportNovBtn" class="btn-process btn-month">📄 نوفمبر</button>
+            <button id="exportDecBtn" class="btn-process btn-month">📄 ديسمبر</button>
+            <button id="exportFebBtn" class="btn-process btn-month">📄 فيفري</button>
+            <button id="exportMarBtn" class="btn-process btn-month">📄 مارس</button>
+            <button id="exportAprBtn" class="btn-process btn-month">📄 أفريل</button>
+            <button id="exportMayBtn" class="btn-process btn-month">📄 ماي</button>
+        </div>
+        
+        <div id="status"></div>
+        <div id="resultArea" style="display:none;">
+            <h3>👨‍🏫 قائمة الأساتذة المستخرجين</h3>
+            <div style="overflow-x: auto;">
+                <table id="teachersTable">
+                    <thead><tr><th>NIN</th><th>اللقب والاسم</th><th>الكلية</th><th>القسم</th><th>تاريخ الميلاد</th><th>ساعات السداسي الأول</th><th>ساعات السداسي الثاني</th><th>الإجمالي</th><th>الوثائق</th></tr></thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let templates = { info: null, contract: null, work: null, admin: null, reward: null };
+    let teachersMap = new Map();
+
+    const universityData = {
+        uni_ar: "جامعة الشهيد الشيخ العربي التبسي - تبسة",
+        uni_fr: "Echahid Cheikh Larbi Tebessi University - Tebessa",
+        faculty_ar: "كلية العلوم الدقيقة وعلوم الطبيعة والحياة",
+        faculty_fr: "Faculty of Exact Sciences, Natural and Life Sciences"
+    };
+
+    function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        if (username === 'FSESNV' && password === 'gattal') {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainSystem').style.display = 'block';
+        } else {
+            document.getElementById('errorMsg').style.display = 'block';
+        }
+    }
+    
+    function logout() {
+        document.getElementById('mainSystem').style.display = 'none';
+        document.getElementById('loginPage').style.display = 'block';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        teachersMap.clear();
+        document.getElementById('resultArea').style.display = 'none';
+        document.getElementById('monthButtons').style.display = 'none';
+        document.getElementById('status').style.display = 'none';
+    }
+    
+    document.getElementById('password')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') login(); });
+
+    function loadTemplate(event, type, statusId) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            templates[type] = ev.target.result;
+            document.getElementById(statusId).innerHTML = '✅ تم الرفع بنجاح';
+            document.getElementById(statusId).className = 'template-status status-ready';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    
+    document.getElementById('tpl_info')?.addEventListener('change', (e) => loadTemplate(e, 'info', 'infoStatus'));
+    document.getElementById('tpl_contract')?.addEventListener('change', (e) => loadTemplate(e, 'contract', 'contractStatus'));
+    document.getElementById('tpl_work')?.addEventListener('change', (e) => loadTemplate(e, 'work', 'workStatus'));
+    document.getElementById('tpl_admin')?.addEventListener('change', (e) => loadTemplate(e, 'admin', 'adminStatus'));
+    document.getElementById('tpl_reward')?.addEventListener('change', (e) => loadTemplate(e, 'reward', 'rewardStatus'));
+
+    function cleanKeys(obj) {
+        const cleaned = {};
+        for (let key in obj) cleaned[key.trim()] = obj[key];
+        return cleaned;
+    }
+
+    function excelSerialToDate(serial) {
+        if (!serial && serial !== 0) return "";
+        if (typeof serial === 'string' && (serial.includes("/") || serial.includes("-"))) return serial;
+        let num = typeof serial === 'number' ? serial : parseFloat(serial);
+        if (isNaN(num)) return serial.toString();
+        const MS_PER_DAY = 86400000;
+        let date = new Date(new Date(1899, 11, 30).getTime() + (num * MS_PER_DAY));
+        if (num > 59) date = new Date(date.getTime() - MS_PER_DAY);
+        return `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+    }
+
+    function parseHours(value) {
+        if (value === undefined || value === null || value === "") return 0;
+        if (typeof value === 'number') return value;
+        let num = parseFloat(value.toString().trim().replace(',', '.'));
+        return isNaN(num) ? 0 : num;
+    }
+
+    async function processFiles() {
+        const f1 = document.getElementById('excel1').files[0];
+        const f2 = document.getElementById('excel2').files[0];
+        if (!f1 && !f2) return alert("يرجى اختيار ملف إكسل واحد على الأقل.");
+
+        const status = document.getElementById('status');
+        status.style.display = "block";
+        status.innerHTML = "⏳ جاري قراءة الملفات ودمج البيانات...";
+        status.style.background = "#fff3cd";
+
+        teachersMap.clear();
+        const files = [f1, f2].filter(f => f);
+
+        const monthsConfig = [
+            { name: "أكتوبر", cols: ["أكتوبر حجم الساعات الأسبوعية الأسبوع الأول", "أكتوبر حجم الساعات الأسبوعية الأسبوع الثاني", "أكتوبر حجم الساعات الأسبوعية الأسبوع الثالث", "أكتوبر حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "نوفمبر", cols: ["نوفمبر حجم الساعات الأسبوعية الأسبوع الأول", "نوفمبر حجم الساعات الأسبوعية الأسبوع الثاني", "نوفمبر حجم الساعات الأسبوعية الأسبوع الثالث", "نوفمبر حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "ديسمبر", cols: ["ديسمبر حجم الساعات الأسبوعية الأسبوع الأول", "ديسمبر حجم الساعات الأسبوعية الأسبوع الثاني", "ديسمبر حجم الساعات الأسبوعية الأسبوع الثالث", "ديسمبر حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "فيفري", cols: ["فيفري حجم الساعات الأسبوعية الأسبوع الأول", "فيفري حجم الساعات الأسبوعية الأسبوع الثاني", "فيفري حجم الساعات الأسبوعية الأسبوع الثالث", "فيفري حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "مارس", cols: ["مارس حجم الساعات الأسبوعية الأسبوع الأول", "مارس حجم الساعات الأسبوعية الأسبوع الثاني", "مارس حجم الساعات الأسبوعية الأسبوع الثالث", "مارس حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "افريل", cols: ["افريل حجم الساعات الأسبوعية الأسبوع الأول", "افريل حجم الساعات الأسبوعية الأسبوع الثاني", "افريل حجم الساعات الأسبوعية الأسبوع الثالث", "افريل حجم الساعات الأسبوعية الأسبوع الرابع"] },
+            { name: "ماي", cols: ["ماي حجم الساعات الأسبوعية الأسبوع الأول", "ماي حجم الساعات الأسبوعية الأسبوع الثاني", "ماي حجم الساعات الأسبوعية الأسبوع الثالث", "ماي حجم الساعات الأسبوعية الأسبوع الرابع"] }
+        ];
+
+        for (let f of files) {
+            const data = await f.arrayBuffer();
+            const wb = XLSX.read(data);
+            const sheet = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+            rows.forEach(rawRow => {
+                const row = cleanKeys(rawRow);
+                const nin = (row["رقم التعريف الوطني (NIN)"] || row["NIN"] || "").toString().trim();
+                if (!nin) return;
+
+                const faculty = row["كلية"] || universityData.faculty_ar;
+                const department = row["القسم"] || "";
+                const semester = row["السداسي"] || "";
+                
+                let weeklyHoursSem1 = 0, weeklyHoursSem2 = 0;
+                if (semester.includes("الأول") || semester === "السداسي الأول") {
+                    weeklyHoursSem1 = parseHours(row["حجم الساعات الأسبوعية السداسي الأول"] || row["حجم الساعات الأسبوعية"] || 0);
+                } else if (semester.includes("الثاني") || semester === "السداسي الثاني") {
+                    weeklyHoursSem2 = parseHours(row["حجم الساعات الأسبوعية السداسي الثاني"] || row["حجم الساعات الأسبوعية"] || 0);
+                }
+
+                let bankAccount = row["رقم الحســـــــــــــاب الـــــــــــــدائن"] || "";
+                let bankParts = ["", "", "", ""];
+                if (bankAccount && bankAccount.includes("/")) {
+                    let parts = bankAccount.split("/");
+                    bankParts = parts.reverse();
+                }
+
+                const dateNaissance = excelSerialToDate(row["تاريخ الميلاد"]);
+                const lieuNaissance = row["مكان الميلاد"] || "تبسة";
+                const wilaya = row["الولاية"] || "تبسة";
+                const agreedHours = weeklyHoursSem1 + weeklyHoursSem2;
+
+                if (!teachersMap.has(nin)) {
+                    teachersMap.set(nin, {
+                        nin: nin, nom: row["اللقــــــــــب"] || row["اللقب"] || "",
+                        prenom: row["الاســـــــــم"] || row["الاسم"] || "",
+                        date_naissance: dateNaissance, lieu_naissance: lieuNaissance, wilaya: wilaya,
+                        faculty: faculty, department: department,
+                        diplome: row["شهادة التأهـــــيل"] || row["شهادة التأهيل"] || "",
+                        specialite: row["اختصاص شهادة"] || "",
+                        diplome_year: row["سنة التحصل على الشهادة"] || "",
+                        grade: row["الرتبة"] || "/",
+			activity: row["النشاط الممارس"] || "",
+                        bank_parts: bankParts,
+                        contract_start: excelSerialToDate(row["مـــــدة ســـــريان العـــــقد من"]),
+                        contract_end: excelSerialToDate(row["مـــــدة ســـــريان العـــــقد إلى"]),
+                        agreed_hours: agreedHours,
+                        weekly_hours_sem1: 0, weekly_hours_sem2: 0,
+                        monthlyData: {},
+                        modules: []
+                    });
+                }
+
+                const prof = teachersMap.get(nin);
+                prof.weekly_hours_sem1 += weeklyHoursSem1;
+                prof.weekly_hours_sem2 += weeklyHoursSem2;
+                
+                if (prof.bank_parts[0] === "" && bankParts[0] !== "") prof.bank_parts = bankParts;
+
+                for (let month of monthsConfig) {
+                    const week1 = parseHours(row[month.cols[0]]);
+                    const week2 = parseHours(row[month.cols[1]]);
+                    const week3 = parseHours(row[month.cols[2]]);
+                    const week4 = parseHours(row[month.cols[3]]);
+                    const total = week1 + week2 + week3 + week4;
+                    
+                    if (!prof.monthlyData[month.name]) {
+                        prof.monthlyData[month.name] = { week1: 0, week2: 0, week3: 0, week4: 0, total: 0 };
+                    }
+                    prof.monthlyData[month.name].week1 += week1;
+                    prof.monthlyData[month.name].week2 += week2;
+                    prof.monthlyData[month.name].week3 += week3;
+                    prof.monthlyData[month.name].week4 += week4;
+                    prof.monthlyData[month.name].total += total;
+                }
+
+                if (row["المقياس"] || row["المقياس "]) {
+                    prof.modules.push({
+                        name: row["المقياس"] || row["المقياس "],
+                        level: row["المستوى"] || "",
+                        semester: semester,
+                        cours: parseFloat(row["الدروس"] || 0),
+                        td: parseFloat(row["الأعمال الموجّهة"] || row["الأعمال الموجهة"] || 0),
+                        tp: parseFloat(row["الأعمال التّطبيقية"] || row["الأعمال التطبيقية"] || 0),
+                        hours: weeklyHoursSem1 + weeklyHoursSem2,
+                        dept: department,
+                        specialite_module: row["الاختصاص"] || ""
+                    });
+                }
+            });
+        }
+
+        renderTable();
+        status.innerHTML = `✅ تم معالجة ${teachersMap.size} أستاذ بنجاح.`;
+        status.style.background = "#d4edda";
+        document.getElementById('monthButtons').style.display = 'flex';
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = "";
+        teachersMap.forEach(prof => {
+            const tr = document.createElement('tr');
+            const total = prof.weekly_hours_sem1 + prof.weekly_hours_sem2;
+            tr.innerHTML = `
+                <td>${prof.nin}</td><td>${prof.nom} ${prof.prenom}</td>
+                <td>${prof.faculty || '—'}</td><td>${prof.department || '—'}</td>
+                <td>${prof.date_naissance || '—'}</td>
+                <td>${prof.weekly_hours_sem1} ساعة</td><td>${prof.weekly_hours_sem2} ساعة</td>
+                <td><strong>${total}</strong> ساعة</td>
+                <td class="actions">
+                    <button class="doc-btn" onclick="downloadDoc('${prof.nin}', 'info')">📋 استمارة</button>
+                    <button class="doc-btn contract" onclick="downloadDoc('${prof.nin}', 'contract')">📑 عقد</button>
+                    <button class="doc-btn work" onclick="downloadDoc('${prof.nin}', 'work')">📜 ش. عمل</button>
+                    <button class="doc-btn admin" onclick="downloadDoc('${prof.nin}', 'admin')">🏛️ ش. إدارية</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('resultArea').style.display = "block";
+    }
+
+    // تصدير كشف المكافأة لشهر محدد (جدولين منفصلين - عدة صفوف)
+    function exportMonthlyRewardWord(month) {
+        if (!templates.reward) {
+            alert("⚠️ يرجى رفع قالب كشف المكافأة (Word) أولاً!");
+            return;
+        }
+        
+        // صفوف الدكتوراه
+        const doctorsRows = [];
+        let doctorCounter = 1;
+        
+        // صفوف الماستر
+        const mastersRows = [];
+        let masterCounter = 1;
+        
+        teachersMap.forEach(prof => {
+            const monthData = prof.monthlyData[month];
+            if (!monthData || monthData.total === 0) return;
+            
+            const price = prof.diplome === "الدكتوراه" ? 750 : 300;
+            const reward = monthData.total * price;
+            
+            const rowData = {
+                num: prof.diplome === "الدكتوراه" ? doctorCounter++ : masterCounter++,
+                nin: prof.nin,
+                nom_prenom: `${prof.nom} ${prof.prenom}`,
+                date_naissance: prof.date_naissance,
+                diplome: prof.diplome,
+                specialite: prof.specialite,
+                bank_account: prof.bank_parts.filter(p => p && p !== "").join(" "),
+                tasks: prof.modules.map(m => m.name).join(", "),
+                contract_start: prof.contract_start,
+                contract_end: prof.contract_end,
+                agreed_hours: prof.agreed_hours,
+                week1: monthData.week1,
+                week2: monthData.week2,
+                week3: monthData.week3,
+                week4: monthData.week4,
+                total: monthData.total,
+                price: price,
+                reward: reward.toLocaleString()
+            };
+            
+            if (prof.diplome === "الدكتوراه") {
+                doctorsRows.push(rowData);
+            } else {
+                mastersRows.push(rowData);
+            }
+        });
+        
+        if (doctorsRows.length === 0 && mastersRows.length === 0) {
+            alert(`لا توجد بيانات للأساتذة في شهر ${month}`);
+            return;
+        }
+        
+        const today = new Date();
+        const year = today.getFullYear();
+        const formattedDate = `${today.getDate().toString().padStart(2,'0')}/${(today.getMonth()+1).toString().padStart(2,'0')}/${year}`;
+        
+        const docData = {
+            registration_number: `01/${year}`,
+            date: formattedDate,
+            faculty_ar: universityData.faculty_ar,
+            month: month,
+            year: year,
+            doctorsRows: doctorsRows,   // عدة صفوف في جدول الدكتوراه
+            mastersRows: mastersRows     // عدة صفوف في جدول الماستر
+        };
+        
+        try {
+            const zip = new PizZip(templates.reward);
+            const doc = new window.docxtemplater(zip, { 
+                paragraphLoop: true, 
+                linebreaks: true, 
+                nullGetter: () => "" 
+            });
+            doc.setData(docData);
+            doc.render();
+            const out = doc.getZip().generate({ type: "blob" });
+            saveAs(out, `كشف_مكافأة_شهر_${month}_${year}.docx`);
+        } catch (error) {
+            console.error(error);
+            alert("حدث خطأ أثناء توليد الملف: " + error.message);
+        }
+    }
+
+    function buildCoursText(prof) {
+        let text = "";
+        for (const m of prof.modules) if (m.cours > 0) text += `السداسي ${m.semester || ''} ، مقياس : ${m.name || ''} ، ${m.level || ''} ، ${m.specialite_module || prof.specialite} ، ${m.dept || prof.department}\n`;
+        return text || "/";
+    }
+
+    function buildTDText(prof) {
+        let text = "";
+        for (const m of prof.modules) if (m.td > 0) text += `السداسي ${m.semester || ''} ، مقياس : ${m.name || ''} ، ${m.level || ''} ، ${m.specialite_module || prof.specialite} ، ${m.dept || prof.department}\n`;
+        return text || "/";
+    }
+
+    function buildTPText(prof) {
+        let text = "";
+        for (const m of prof.modules) if (m.tp > 0) text += `السداسي ${m.semester || ''} ، مقياس : ${m.name || ''} ، ${m.level || ''} ، ${m.specialite_module || prof.specialite} ， ${m.dept || prof.department}\n`;
+        return text || "/";
+    }
+
+    function buildModuleRowsText(prof) {
+        let text = "";
+        for (const m of prof.modules) text += `| ${m.name || ''} | ${m.level || ''} | ${m.dept || prof.department} | ${m.cours} | ${m.td} | ${m.tp} | ${m.semester || ''} | ${m.hours} |\n`;
+        return text;
+    }
+
+    function downloadDoc(nin, docType) {
+        const tplMap = { info: 'info', contract: 'contract', work: 'work', admin: 'admin' };
+        if (!templates[tplMap[docType]]) {
+            alert(`⚠️ يرجى رفع قالب ${docType === 'info' ? 'استمارة المعلومات' : docType === 'contract' ? 'عقد التوظيف' : docType === 'work' ? 'شهادة العمل' : 'الشهادة الإدارية'} أولاً!`);
+            return;
+        }
+        
+        const prof = teachersMap.get(nin);
+        if (!prof) return;
+        
+        const total = prof.weekly_hours_sem1 + prof.weekly_hours_sem2;
+        const today = new Date();
+        const formattedDate = `${today.getDate().toString().padStart(2,'0')}/${(today.getMonth()+1).toString().padStart(2,'0')}/${today.getFullYear()}`;
+        const bankAccount = prof.bank_parts.filter(p => p && p !== "").join("    ");
+        
+        const docData = {
+            registration_number: `01/${today.getFullYear()}`,
+            year: "2025-2026",
+            date: formattedDate,
+            nin: prof.nin,
+            nom: prof.nom,
+            prenom: prof.prenom,
+            date_naissance: prof.date_naissance,
+            lieu_naissance: prof.lieu_naissance,
+            wilaya: prof.wilaya,
+            faculty: prof.faculty,
+            department: prof.department,
+            diplome: prof.diplome,
+            specialite: prof.specialite,
+            diplome_year: prof.diplome_year,
+            grade: prof.grade,
+	    activity: prof.activity,
+            bank_account: bankAccount,
+            weekly_hours_sem1: prof.weekly_hours_sem1,
+            weekly_hours_sem2: prof.weekly_hours_sem2,
+            total_weekly_hours: total,
+            cours_text: buildCoursText(prof),
+            td_text: buildTDText(prof),
+            tp_text: buildTPText(prof),
+            module_rows: buildModuleRowsText(prof),
+            contract_start: prof.contract_start,
+            contract_end: prof.contract_end,
+            issue_place: "تبسة",
+            issue_date: formattedDate,
+            volume_horaire: Math.min(total, 8),
+            modules_enseignes: prof.modules.map(m => `- ${m.name} (${m.level}) - ${m.dept || prof.department} - ${m.hours} س/أسبوع`).join("\n"),
+            modules_table: prof.modules.map(m => `${m.name} | ${m.level} | ${m.cours} | ${m.td} | ${m.tp} | ${m.semester} | ${m.hours}`).join("\n"),
+            uni_ar: universityData.uni_ar,
+            uni_fr: universityData.uni_fr,
+            faculty_ar: universityData.faculty_ar,
+            faculty_fr: universityData.faculty_fr
+        };
+
+        try {
+            const zip = new PizZip(templates[tplMap[docType]]);
+            const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => "" });
+            doc.setData(docData);
+            doc.render();
+            const out = doc.getZip().generate({ type: "blob" });
+            const fileNames = { info: 'استمارة', contract: 'عقد', work: 'شهادة_عمل', admin: 'شهادة_ادارية' };
+            saveAs(out, `${prof.nom}_${prof.prenom}_${fileNames[docType]}.docx`);
+        } catch (error) {
+            console.error(error);
+            alert("حدث خطأ أثناء توليد الملف: " + error.message);
+        }
+    }
+
+    document.getElementById('processBtn')?.addEventListener('click', processFiles);
+    document.getElementById('exportOctBtn')?.addEventListener('click', () => exportMonthlyRewardWord("أكتوبر"));
+    document.getElementById('exportNovBtn')?.addEventListener('click', () => exportMonthlyRewardWord("نوفمبر"));
+    document.getElementById('exportDecBtn')?.addEventListener('click', () => exportMonthlyRewardWord("ديسمبر"));
+    document.getElementById('exportFebBtn')?.addEventListener('click', () => exportMonthlyRewardWord("فيفري"));
+    document.getElementById('exportMarBtn')?.addEventListener('click', () => exportMonthlyRewardWord("مارس"));
+    document.getElementById('exportAprBtn')?.addEventListener('click', () => exportMonthlyRewardWord("افريل"));
+    document.getElementById('exportMayBtn')?.addEventListener('click', () => exportMonthlyRewardWord("ماي"));
+</script>
+</body>
+</html>
